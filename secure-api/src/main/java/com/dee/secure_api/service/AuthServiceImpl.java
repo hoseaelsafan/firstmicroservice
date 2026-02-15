@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -76,10 +77,11 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
             return new ApiResponse<>("error", "03",null);
         }
-
+        // to get role
+        List<String> roleNames = user.getRoles().stream().map(role -> role.getName().name()).toList();
         // 3. Generate JWT
         //String token = jwtUtils.generateToken(user.getUsername());
-        String token = jwtUtils.generateNewToken(user.getUsername(), user.getEmail());
+        String token = jwtUtils.generateNewToken(user.getUsername(), user.getEmail(), roleNames);
         // 4. Build response
         JwtResponse jwtResponse = new JwtResponse(
                 token,

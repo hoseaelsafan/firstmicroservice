@@ -12,6 +12,7 @@ import io.jsonwebtoken.security.Keys;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtUtils {
@@ -43,7 +44,7 @@ public class JwtUtils {
 
     }
 
-    public String generateNewToken(String username, String email){
+    public String generateNewToken(String username, String email, List<String> roles){
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
 
@@ -53,6 +54,7 @@ public class JwtUtils {
                 .setExpiration(expiryDate)
                 .claim("valid", true)
                 .claim("email", email)
+                .claim("role",roles)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
