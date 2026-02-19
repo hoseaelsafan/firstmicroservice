@@ -10,7 +10,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtUtils {
@@ -53,6 +55,24 @@ public class JwtUtils {
             return claims.get("email", String.class);
         } catch (JwtException | IllegalArgumentException e){
             return "Email not valid";
+        }
+    }
+    public List<String> extractRoles(String token) {
+        try {
+            Claims claims = getClaimsFromToken(token);
+
+            List<?> roles = claims.get("roles", List.class);
+
+            if (roles == null) {
+                return Collections.emptyList();
+            }
+
+            return roles.stream()
+                    .map(Object::toString)
+                    .toList();
+
+        } catch (JwtException | IllegalArgumentException e) {
+            return Collections.emptyList();
         }
     }
 

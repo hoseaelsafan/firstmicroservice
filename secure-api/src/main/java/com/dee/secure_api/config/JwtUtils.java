@@ -52,9 +52,8 @@ public class JwtUtils {
                 .setSubject(username)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .claim("valid", true)
                 .claim("email", email)
-                .claim("role",roles)
+                .claim("roles",roles)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 

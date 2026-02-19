@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -41,23 +43,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         final String jwt = authHeader.substring(7);
         final String email = jwtUtils.validateEmail(jwt);
+        final List<String> roles = jwtUtils.extractRoles(jwt);
 
         try {
-            Boolean valid = jwtUtils.validateToken(jwt);
-
-            if (Boolean.TRUE.equals(valid)) {
                 if(Boolean.TRUE.equals(customEmail.getByemail(email))) {
                     System.out.println("✅ Token is valid, request allowed.");
+                    // convert role
+                    List<GrantedAuthority> authorities = roles.stream()
+                            .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(role))
+                            .toList();
+
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    email,
+                                    null,
+                                    authorities
+                            );
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                     filterChain.doFilter(request, response);// ✅ continue to controller
                 }else  {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.getWriter().write("🚫 User and email is not found");
                 }
-            } else {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                response.getWriter().write("🚫 Token invalid or expired");
-                return; // ❌ stop here
-            }
+
 
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
