@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -36,43 +37,31 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("❌ Missing or invalid Authorization header");
-            return; // ❌ stop here
+            throw new BadCredentialsException("Missing or invalid Authorization header");
         }
 
         final String jwt = authHeader.substring(7);
-        final String email = jwtUtils.validateEmail(jwt);
-        final List<String> roles = jwtUtils.extractRoles(jwt);
-
         try {
-                if(Boolean.TRUE.equals(customEmail.getByemail(email))) {
-                    System.out.println("✅ Token is valid, request allowed.");
-                    // convert role
-                    List<GrantedAuthority> authorities = roles.stream()
-                            .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(role))
-                            .toList();
+            String email = jwtUtils.validateEmail(jwt);
+            List<String> roles = jwtUtils.extractRoles(jwt);
 
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    email,
-                                    null,
-                                    authorities
-                            );
+            if (!Boolean.TRUE.equals(customEmail.getByemail(email))) {
+                throw new BadCredentialsException("User not found");
+            }
 
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    filterChain.doFilter(request, response);// ✅ continue to controller
-                }else  {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.getWriter().write("🚫 User and email is not found");
-                }
+            List<GrantedAuthority> authorities = roles.stream()
+                    .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(role))
+                    .toList();
 
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(email, null, authorities);
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            filterChain.doFilter(request, response);
 
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("❌ Invalid token: " + e.getMessage());
-            return; // ❌ stop here
-
+            throw new BadCredentialsException("Invalid or expired token");
         }
     }
 }
