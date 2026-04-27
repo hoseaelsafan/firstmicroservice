@@ -6,6 +6,8 @@ import com.dee.employee_management.dto.registerEmployeeRequest;
 import com.dee.employee_management.entity.employee;
 import com.dee.employee_management.mapper.EmployeeMapper;
 import com.dee.employee_management.repository.Employeerepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,8 @@ public class Employeeservice implements EmployeeServiceInterface{
 
     private final Employeerepository employeerepository;
     private final EmployeeMapper employeeMapper;
+    private static final Logger actLog =
+            LoggerFactory.getLogger("EMPLOYEE_LOGGER");
 
     @Autowired
     public Employeeservice(Employeerepository employeerepository, EmployeeMapper employeeMapper) {
@@ -37,8 +41,10 @@ public class Employeeservice implements EmployeeServiceInterface{
 
     @Override
     public EmployeeManagementResponse<List<EmployeePayload>> getAllEmployees() {
+        actLog.info("Check Data activity");
         List<employee> list = employeerepository.findAll();
         List<EmployeePayload> FetchUser = employeeMapper.toListLoadResponse(list);
+        actLog.info("User has been loaded ");
         return new EmployeeManagementResponse<>("00","Succes", FetchUser);
     }
 

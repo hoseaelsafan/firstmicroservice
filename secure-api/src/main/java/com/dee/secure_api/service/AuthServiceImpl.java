@@ -8,6 +8,10 @@ import com.dee.secure_api.entity.User;
 import com.dee.secure_api.repository.RoleRepository;
 import com.dee.secure_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +27,8 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private static final Logger trxLog =
+            LoggerFactory.getLogger("AUTH_LOGGER");
 
     @Override
     public ApiResponse<?> registeruser(UserRegisReq dto) {
@@ -69,14 +75,19 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ApiResponse<JwtResponse> loginuser(UserLoginReq dto){
+        trxLog.info("AUTHENTICATING username : {}", dto.getUsername());
         // 1. Find user
         User user = userRepository.findByUsername(dto.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->{
+                    trxLog.info("LOGIN_FAILED username : {}", dto.getUsername());
+                    return new BadCredentialsException("User not found");
+                });
 
         // 2. Validate password
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            return new ApiResponse<>("error", "03",null);
-        }
+            if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+                throw  new BadCredentialsException("User And Password dont match");
+            }
+
         // to get role
         List<String> roleNames = user.getRoles().stream().map(role -> role.getName().name()).toList();
         // 3. Generate JWT
@@ -88,7 +99,7 @@ public class AuthServiceImpl implements AuthService {
                 "Bearer",
                 jwtUtils.getExpirationMs()
         );
-
+        trxLog.info("LOGIN_SUCCESS username : {} ",dto.getUsername());
         return new ApiResponse<>("success", "00", jwtResponse);
     }
 }

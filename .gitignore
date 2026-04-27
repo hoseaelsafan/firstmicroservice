@@ -1,0 +1,9 @@
+# Spring Boot
+application-*.yml
+application-*.properties
+
+# --- Log Files (Microservice Specific) ---
+# This matches 'logs' folders anywhere in the subdirectories
+**/logs/
+*.log
+*.gz

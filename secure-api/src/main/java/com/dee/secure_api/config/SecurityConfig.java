@@ -21,6 +21,7 @@ public class SecurityConfig {
     private  final AuthenticationConfiguration authconfig;
     private final JwtAuthFilter jwtAuthFilter;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
+    private final RequestIdFilter requestIdFilter;
     // Authentication manager (used in AuthController)
     @Bean
     public AuthenticationManager authenticationManager() throws Exception{
@@ -44,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,"/api/user/me").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
                         .anyRequest().denyAll()
                 )
+                .addFilterBefore(requestIdFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
