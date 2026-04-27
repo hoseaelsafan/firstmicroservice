@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 @Component
-public class RequestidFilter extends OncePerRequestFilter {
+public class RequestIdFilter extends OncePerRequestFilter {
     private static final String REQUEST_ID = "requestId";
     private static final String HEADER = "X-Request-Id";
 
