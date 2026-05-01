@@ -5,6 +5,7 @@ import com.dee.secure_api.dto.*;
 import com.dee.secure_api.entity.ERole;
 import com.dee.secure_api.entity.Role;
 import com.dee.secure_api.entity.User;
+import com.dee.secure_api.monitoring.metrics.AuthMetrics;
 import com.dee.secure_api.repository.RoleRepository;
 import com.dee.secure_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,8 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private final AuthMetrics authMetrics;
+
     private static final Logger trxLog =
             LoggerFactory.getLogger("AUTH_LOGGER");
 
@@ -80,12 +83,14 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByUsername(dto.getUsername())
                 .orElseThrow(() ->{
                     trxLog.info("LOGIN_FAILED username : {}", dto.getUsername());
+                    authMetrics.failure();
                     return new BadCredentialsException("User not found");
                 });
 
         // 2. Validate password
             if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-                throw  new BadCredentialsException("User And Password dont match");
+                authMetrics.failure();
+                throw new BadCredentialsException("User And Password dont match");
             }
 
         // to get role
@@ -100,6 +105,7 @@ public class AuthServiceImpl implements AuthService {
                 jwtUtils.getExpirationMs()
         );
         trxLog.info("LOGIN_SUCCESS username : {} ",dto.getUsername());
+        authMetrics.success();
         return new ApiResponse<>("success", "00", jwtResponse);
     }
 }

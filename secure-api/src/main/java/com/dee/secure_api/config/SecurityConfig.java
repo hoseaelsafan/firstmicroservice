@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,"/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST,"/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/user/me").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().denyAll()
                 )
                 .addFilterBefore(requestIdFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
