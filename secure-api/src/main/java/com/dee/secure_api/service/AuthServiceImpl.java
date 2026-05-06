@@ -9,7 +9,6 @@ import com.dee.secure_api.monitoring.metrics.AuthMetrics;
 import com.dee.secure_api.repository.RoleRepository;
 import com.dee.secure_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.BadRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -77,35 +76,41 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ApiResponse<JwtResponse> loginuser(UserLoginReq dto){
-        trxLog.info("AUTHENTICATING username : {}", dto.getUsername());
-        // 1. Find user
-        User user = userRepository.findByUsername(dto.getUsername())
-                .orElseThrow(() ->{
-                    trxLog.info("LOGIN_FAILED username : {}", dto.getUsername());
-                    authMetrics.failure();
-                    return new BadCredentialsException("User not found");
-                });
+    public ApiResponse<JwtResponse> loginuser(UserLoginReq dto) {
+        try {
+            return authMetrics.recordLogin(() -> {
+                trxLog.info("AUTHENTICATING username : {}", dto.getUsername());
+                // 1. Find user
+                User user = userRepository.findByUsername(dto.getUsername())
+                        .orElseThrow(() -> new BadCredentialsException("User not found"));
 
-        // 2. Validate password
-            if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-                authMetrics.failure();
-                throw new BadCredentialsException("User And Password dont match");
-            }
+                // 2. Validate password
+                if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+                    throw new BadCredentialsException("User And Password dont match");
+                }
 
-        // to get role
-        List<String> roleNames = user.getRoles().stream().map(role -> role.getName().name()).toList();
-        // 3. Generate JWT
-        //String token = jwtUtils.generateToken(user.getUsername());
-        String token = jwtUtils.generateNewToken(user.getUsername(), user.getEmail(), roleNames);
-        // 4. Build response
-        JwtResponse jwtResponse = new JwtResponse(
-                token,
-                "Bearer",
-                jwtUtils.getExpirationMs()
-        );
-        trxLog.info("LOGIN_SUCCESS username : {} ",dto.getUsername());
-        authMetrics.success();
-        return new ApiResponse<>("success", "00", jwtResponse);
+                // to get role
+                List<String> roleNames = user.getRoles().stream().map(role -> role.getName().name()).toList();
+                // 3. Generate JWT
+                //String token = jwtUtils.generateToken(user.getUsername());
+                String token = jwtUtils.generateNewToken(user.getUsername(), user.getEmail(), roleNames);
+                // 4. Build response
+                JwtResponse jwtResponse = new JwtResponse(
+                        token,
+                        "Bearer",
+                        jwtUtils.getExpirationMs()
+                );
+                trxLog.info("LOGIN_SUCCESS username : {} ", dto.getUsername());
+                authMetrics.success();
+                return new ApiResponse<>("success", "00", jwtResponse);
+            });
+
+        }
+        catch (BadCredentialsException ex){
+            trxLog.info("LOGIN_FAILED username : {}", dto.getUsername());
+            authMetrics.failure();
+            throw ex;
+        }
     }
+
 }
